@@ -805,13 +805,14 @@ impl Handler for Client {
 
     /// Called when a timeout is triggered.
     fn on_timeout(&mut self, _event: Token) -> Result<()> {
-        if !self.is_watchdog_refreshed {
-            self.execute_on_error_cb(&format!("WS Client timeout!\n"));
-            // 連線斷掉時，要用 shutdown，才能關掉。
-            self.ws_out.shutdown()
-        } else {
-            self.is_watchdog_refreshed = false;
-            self.ws_out.timeout(WS_WATCHDOG_PERIOD_MS, WS_TIMEOUT_TOKEN)
-        }
+//        if !self.is_watchdog_refreshed {
+//            self.execute_on_error_cb(&format!("WS Client timeout!\n"));
+//            // 連線斷掉時，要用 shutdown，才能關掉。
+//            self.ws_out.shutdown()
+//        } else {
+//            self.is_watchdog_refreshed = false;
+//            self.ws_out.timeout(WS_WATCHDOG_PERIOD_MS, WS_TIMEOUT_TOKEN)
+//        }
+        Ok(())
     }
 }

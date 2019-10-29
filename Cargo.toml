@@ -1,6 +1,6 @@
 [package]
 name = "botnanars"
-version = "0.3.8"
+version = "0.2.0"
 authors = ["Mapacode Inc."]
 
 [dependencies]
