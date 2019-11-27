@@ -794,7 +794,7 @@ impl Handler for Client {
 
     /// on error
     fn on_error(&mut self, err: Error) {
-        self.execute_on_error_cb(&format!("on_error: {:?}\n", err));
+        self.execute_on_error_cb(&format!("on_error ({}): {:?}\n", VERSION, err));
     }
 
     /// on close
@@ -811,7 +811,7 @@ impl Handler for Client {
             let result = self
                 .ws_out
                 .close_with_reason(CloseCode::Abnormal, "WS Client timeout");
-            self.execute_on_error_cb(&format!("WS Client timeout!\n"));
+            self.execute_on_error_cb(&format!("WS Client timeout! ({})\n", VERSION));
             result
         } else {
             self.is_watchdog_refreshed = false;
