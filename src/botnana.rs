@@ -14,7 +14,7 @@ use url;
 use ws::{self, connect, util::Token, CloseCode, Error, ErrorKind, Handler, Handshake, Message,
          Result};
 const WS_TIMEOUT_TOKEN: Token = Token(1);
-const WS_WATCHDOG_PERIOD_MS: u64 = 10_000;
+const WS_WATCHDOG_PERIOD_MS: u64 = 25_000;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 /// Callback Handler
@@ -24,7 +24,7 @@ struct CallbackHandler {
     /// 用來回傳指標給使用者
     pointer: *mut c_void,
     /// callback 函式指標
-    callback: Box<Fn(*mut c_void, *const c_char) + Send>,
+    callback: Box<dyn Fn(*mut c_void, *const c_char) + Send>,
 }
 
 unsafe impl Send for CallbackHandler {}
@@ -40,7 +40,7 @@ struct TagCallbackHandler {
     /// u32: position
     /// u32: channel
     /// u32: value (string)
-    callback: Box<Fn(*mut c_void, u32, u32, *const c_char) + Send>,
+    callback: Box<dyn Fn(*mut c_void, u32, u32, *const c_char) + Send>,
 }
 
 unsafe impl Send for TagCallbackHandler {}
@@ -69,7 +69,7 @@ pub struct Botnana {
     on_message_cb: Arc<Mutex<Option<CallbackHandler>>>,
     pub data_pool: Arc<Mutex<DataPool>>,
     pub(crate) internal_handlers:
-        Arc<Mutex<HashMap<String, Box<Fn(&mut DataPool, usize, usize, &str) + Send>>>>,
+        Arc<Mutex<HashMap<String, Box<dyn Fn(&mut DataPool, usize, usize, &str) + Send>>>>,
     pub(crate) init_queries: Arc<Mutex<Vec<String>>>,
     pub(crate) cyclic_queries: Arc<Mutex<Vec<String>>>,
     last_query: Arc<Mutex<usize>>,
@@ -669,7 +669,9 @@ impl Botnana {
     /// Execute on_open callback
     fn execute_on_open_cb(&self) {
         if let Some(ref cb) = *self.on_open_cb.lock().expect("execute_on_open_cb") {
-            let mut temp_msg = String::from("Connect to ".to_owned() + &self.url() + " (" + VERSION+ ")").into_bytes();
+            let mut temp_msg =
+                String::from("Connect to ".to_owned() + &self.url() + " (" + VERSION + ")")
+                    .into_bytes();
             temp_msg.push(0);
             let msg = CStr::from_bytes_with_nul(temp_msg.as_slice())
                 .expect("toCstr")
@@ -792,23 +794,25 @@ impl Handler for Client {
 
     /// on error
     fn on_error(&mut self, err: Error) {
-        self.execute_on_error_cb(&format!("{:?}\n", err));
+        self.execute_on_error_cb(&format!("on_error: {:?}\n", err));
     }
 
     /// on close
     fn on_close(&mut self, code: CloseCode, reason: &str) {
         self.execute_on_error_cb(&format!(
-            "WS Client close code = {:?}, reason = {}\n",
-            code, reason
+            "WS Client close code ({}) = {:?}, reason = {}\n",
+            VERSION, code, reason
         ));
     }
 
     /// Called when a timeout is triggered.
     fn on_timeout(&mut self, _event: Token) -> Result<()> {
         if !self.is_watchdog_refreshed {
+            let result = self
+                .ws_out
+                .close_with_reason(CloseCode::Abnormal, "WS Client timeout");
             self.execute_on_error_cb(&format!("WS Client timeout!\n"));
-            // 連線斷掉時，要用 shutdown，才能關掉。
-            self.ws_out.shutdown()
+            result
         } else {
             self.is_watchdog_refreshed = false;
             self.ws_out.timeout(WS_WATCHDOG_PERIOD_MS, WS_TIMEOUT_TOKEN)
