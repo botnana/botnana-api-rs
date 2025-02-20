@@ -1,18 +1,23 @@
 use data_pool::DataPool;
 use program::Program;
 use serde_json;
-use std::{self,
-          boxed::Box,
-          collections::{HashMap, VecDeque},
-          ffi::CStr,
-          os::raw::{c_char, c_void},
-          str,
-          sync::{mpsc::{self, TryRecvError},
-                 Arc, Mutex},
-          thread};
+use std::{
+    self,
+    boxed::Box,
+    collections::{HashMap, VecDeque},
+    ffi::CStr,
+    os::raw::{c_char, c_void},
+    str,
+    sync::{
+        mpsc::{self, TryRecvError},
+        Arc, Mutex,
+    },
+    thread,
+};
 use url;
-use ws::{self, connect, util::Token, CloseCode, Error, ErrorKind, Handler, Handshake, Message,
-         Result};
+use ws::{
+    self, connect, util::Token, CloseCode, Error, ErrorKind, Handler, Handshake, Message, Result,
+};
 const WS_TIMEOUT_TOKEN: Token = Token(1);
 const WS_WATCHDOG_PERIOD_MS: u64 = 25_000;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
